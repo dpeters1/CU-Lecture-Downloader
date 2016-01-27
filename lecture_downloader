@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Schedule and record carleton live streams. This is a workaround for thier 50$ VOD service.
+#
+# Use at your own risk. I haven't looked into any policies but I don't think Carleton
+# is happy with people recording their streams.
+# All questions, comments to dpeters0905@gmail.com
+
+# Install ffmpeg if not installed
+
 if ! type ffmpeg > /dev/null;then
     sudo add-apt-repository -y ppa:kirillshkrogalev/ffmpeg-next
     sudo apt-get update
@@ -8,6 +16,7 @@ fi
 
 mkdir -p ~/lectures
 
+#builds url for stream 
 rooms=(ipchannel sa404 sa624 thb la264 kmt sc103)
 
 echo "Which room do you want to capture?"
@@ -22,12 +31,14 @@ echo "[7] Steacie 103"
 echo
 read -p "Enter room number: " room
 
+# Set schedule for crontab
 echo
 echo "Enter time to run in hh:mm:day (day = [0-6], Sunday = 0) or leave blank for live capture"
 echo "Ex: 08:00:2 for 8am on Tuesday"
 echo
 read -p "-----> " timer
 
+# Ensure format is correct
 while [[ "${timer:2:1}" != ":" || "${timer:5:1}" != ":" ]]; do
 
     if [ "$timer" == "" ]; then
@@ -52,6 +63,7 @@ while [[ "${duration:2:1}" != ":" || "${duration:5:1}" != ":" ]]; do
     read -p "Incorrect Input. Try again: " duration;
 done
 
+#File output naming
 fileName=${rooms[($room)-1]}
 echo;echo
 read -p "Enter course name for output file naming or leave blank for default: " fileName
@@ -59,10 +71,10 @@ if [ "$fileName" == "" ];then
     fileName=${rooms[($room)-1]}
 fi
 
-if [ "$scheduled" = false ]; then
+if [ "$scheduled" = false ]; then # Live
     ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-$(date +%b_%d_%H:%M).mp4
 
-else
+else # create entry in crontab for weekly scheduled recording
     crontab -r
     (crontab -l 2>/dev/null; echo "${timer:3:1}${timer:4:1} ${timer:0:1}${timer:1:1} * * ${timer:6:1} ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-\'date +\%b_\%d_\%H:\%M'.mp4")| crontab -
     echo;echo
