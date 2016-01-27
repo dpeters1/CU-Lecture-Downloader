@@ -1,0 +1,71 @@
+#!/bin/bash
+
+if ! type ffmpeg > /dev/null;then
+    sudo add-apt-repository ppa:kirillshkrogalev/ffmpeg-next
+    sudo apt-get update
+    sudo apt-get install ffmpeg
+fi
+
+mkdir -p ~/lectures
+
+rooms=(ipchannel sa404 sa624 thb la264 kmt sc103)
+
+echo "Which room do you want to capture?"
+echo
+echo "[1] Web Channel"
+echo "[2] Southam 404"
+echo "[3] Southam 624"
+echo "[4] Southam B"
+echo "[5] Loeb Building"
+echo "[6] KM Theatre"
+echo "[7] Steacie 103"
+echo
+read -p "Enter room number: " room
+
+echo
+echo "Enter time to run in hh:mm:day (day = [0-6], Sunday = 0) or leave blank for live capture"
+echo "Ex: 08:00:2 for 8am on Tuesday"
+echo
+read -p "-----> " timer
+
+while [[ "${timer:2:1}" != ":" || "${timer:5:1}" != ":" ]]; do
+
+    if [ "$timer" == "" ]; then
+        scheduled=false
+        break;
+    fi
+
+    read -p "Incorrect Input. Try again: " timer;
+done
+
+echo "Enter recording duration in hh:mm:ss format or leave blank for default(01:30:00)"
+echo
+read -p "-----> " duration
+
+while [[ "${duration:2:1}" != ":" || "${duration:5:1}" != ":" ]]; do
+
+    if [ "$duration" == "" ]; then
+        duration="01:30:00"
+        break;
+    fi
+
+    read -p "Incorrect Input. Try again: " duration;
+done
+
+fileName=${rooms[($room)-1]}
+echo;echo
+read -p "Enter course name for output file naming or leave blank for default: " fileName
+if [ "$fileName" == "" ];then
+    fileName=${rooms[($room)-1]}
+fi
+
+runScript="ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-$(date +%b_%d_%H:%M).mp4"
+
+if [ "$scheduled" = false ]; then
+    ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-$(date +%b_%d_%H:%M).mp4
+
+else
+    echo "${timer:3:1}${timer:4:1} ${timer:0:1}${timer:1:1} * * ${timer:6:1} $runScript"
+    crontab -r
+    (crontab -l 2>/dev/null; echo "${timer:3:1}${timer:4:1} ${timer:0:1}${timer:1:1} * * ${timer:6:1} ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-\$(date +%b_%d_%H:%M).mp4")| crontab -
+fi
