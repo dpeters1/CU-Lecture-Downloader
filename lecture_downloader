@@ -75,8 +75,11 @@ if [ "$scheduled" = false ]; then # Live
     ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-$(date +%b_%d_%H:%M).mp4
 
 else # create entry in crontab for weekly scheduled recording
-    crontab -r
-    (crontab -l 2>/dev/null; echo "${timer:3:1}${timer:4:1} ${timer:0:1}${timer:1:1} * * ${timer:6:1} ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-\$(date +\%b_\%d_\%H:\%M).mp4")| crontab -
+    crontab -l > tempCron
+    sed --in-place '/ffmpeg/d' tempCron
+    echo "${timer:3:1}${timer:4:1} ${timer:0:1}${timer:1:1} * * ${timer:6:1} ffmpeg -i http://ec-hlslive.cuol.ca/default/${rooms[($room)-1]}/${rooms[($room)-1]}_1200.m3u8 -strict -2 -t $duration ~/lectures/$fileName-\$(date +\%b_\%d_\%H:\%M).mp4" >> tempCron
+    crontab tempCron
+    rm tempCron
     echo;echo
     echo "Successfully scheduled a weekly recording for $timer"
 fi
